@@ -1,0 +1,74 @@
+{% extends "_base.html" %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block topbar_title %}Клиент · {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ customer.name }}</h1>
+        <p class="sub">
+            {% if customer.phone %}📞 {{ customer.phone }}{% endif %}
+            {% if customer.email %} · ✉ {{ customer.email }}{% endif %}
+        </p>
+    </div>
+    <div class="row">
+        <a href="{{ url_for('customers.edit', cid=customer.id) }}" class="btn btn-outline">
+            <i data-lucide="pencil"></i> Редактировать
+        </a>
+        <a href="{{ url_for('customers.index') }}" class="btn btn-ghost">Назад</a>
+    </div>
+</div>
+
+<div class="grid grid-3 mb-4">
+    <div class="stat">
+        <div class="label">Броней</div>
+        <div class="value">{{ history|length }}</div>
+    </div>
+    <div class="stat stat-accent">
+        <div class="label">Оплачено</div>
+        <div class="value">{{ total_paid|rub }}</div>
+    </div>
+    <div class="stat">
+        <div class="label">С нами с</div>
+        <div class="value" style="font-size:20px">{{ customer.created_at.strftime('%d.%m.%Y') }}</div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>История броней</h3>
+    {% if history %}
+    <table class="tbl" style="margin-top: 8px">
+        <thead><tr><th>Дата</th><th>Услуга</th><th>Ресурс</th><th>Тренер</th>
+                   <th class="text-right">Сумма</th><th>Оплата</th><th>Статус</th></tr></thead>
+        <tbody>
+            {% for b in history %}
+            <tr>
+                <td class="nowrap">{{ b.starts_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ b.service.name if b.service else '—' }}</td>
+                <td class="muted">{{ b.resource.name if b.resource else '—' }}</td>
+                <td class="muted">{{ b.instructor.name if b.instructor else '—' }}</td>
+                <td class="text-right"><span class="price">{{ b.total_kopecks|rub }}</span></td>
+                <td>
+                    {% if b.payment_status == 'paid' %}
+                        <span class="badge pay-paid">Оплачено</span>
+                    {% else %}
+                        <span class="badge pay-unpaid">{{ b.payment_status|status_label }}</span>
+                    {% endif %}
+                </td>
+                <td><span class="badge status-{{ b.status }}">{{ b.status|status_label }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Броней ещё не было.</p>
+    {% endif %}
+</div>
+
+{% if customer.notes %}
+<div class="panel">
+    <h3>Заметки</h3>
+    <p class="muted" style="white-space:pre-wrap">{{ customer.notes }}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "_base.html" %}
+{% block title %}Тайм-шит{% endblock %}
+{% block topbar_title %}Тайм-шит · {{ on.strftime('%d.%m.%Y') }}{% endblock %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js"></script>
+<style>
+.fc .fc-resource-area { width: 180px; }
+.fc-scroller { overflow: auto !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Тайм-шит</h1>
+        <p class="sub">{{ on.strftime('%A, %d %B %Y') }} · {{ all_resources|length }} ресурсов доступно</p>
+    </div>
+    <div class="row">
+        <a href="{{ url_for('calendar.index', date=prev_day, view=view) }}" class="btn btn-outline btn-sm">
+            <i data-lucide="chevron-left"></i>
+        </a>
+        <a href="{{ url_for('calendar.index', date=next_day, view=view) }}" class="btn btn-outline btn-sm">
+            <i data-lucide="chevron-right"></i>
+        </a>
+        <a href="{{ url_for('calendar.index') }}" class="btn btn-outline btn-sm">Сегодня</a>
+        {% if current_user.is_manager %}
+        <a href="{{ url_for('bookings.new') }}" class="btn btn-gold">
+            <i data-lucide="plus"></i> Создать бронь
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="tabs">
+    <a class="tab {{ 'is-active' if view == 'resource' else '' }}" href="{{ url_for('calendar.index', date=on.isoformat(), view='resource') }}">
+        <i data-lucide="columns-3" style="width:14px; height:14px; vertical-align:middle"></i> Ресурсы
+    </a>
+    <a class="tab {{ 'is-active' if view == 'day' else '' }}" href="{{ url_for('calendar.index', date=on.isoformat(), view='day') }}">
+        День
+    </a>
+    <a class="tab {{ 'is-active' if view == 'week' else '' }}" href="{{ url_for('calendar.index', date=on.isoformat(), view='week') }}">
+        Неделя
+    </a>
+</div>
+
+<div class="panel no-pad">
+    <div id="calendar" style="padding: 10px"></div>
+</div>
+
+<div class="panel mt-4">
+    <h3>Легенда статусов</h3>
+    <div class="row">
+        <span class="badge status-confirmed">Подтверждена</span>
+        <span class="badge status-checked_in">Зарегистрирована</span>
+        <span class="badge status-held">Удержание</span>
+        <span class="badge status-no_show">Неявка</span>
+        <span class="badge status-completed">Завершена</span>
+        <span class="muted">· клик по брони открывает панель справа; drag&drop = перенос (с проверкой конфликтов)</span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('calendar');
+    const view = {{ view|tojson }};
+    const initialDate = {{ on.isoformat()|tojson }};
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
+        timeZone: 'local',
+        locale: 'ru',
+        firstDay: 1,
+        height: 720,
+        initialDate: initialDate,
+        initialView:
+            view === 'resource' ? 'resourceTimelineDay' :
+            view === 'week' ? 'timeGridWeek' : 'timeGridDay',
+        slotMinTime: '08:00:00',
+        slotMaxTime: '22:00:00',
+        slotDuration: '00:30:00',
+        nowIndicator: true,
+        allDaySlot: false,
+        editable: true,
+        eventDurationEditable: true,
+        selectable: true,
+
+        resources: '/api/calendar/resources',
+        resourceGroupField: 'group',
+        resourceAreaHeaderContent: 'Ресурс',
+
+        events: '/api/calendar/events',
+
+        headerToolbar: false,
+
+        eventClick: function (info) {
+            info.jsEvent.preventDefault();
+            htmx.ajax('GET', '/bookings/' + info.event.id + '/drawer', {
+                target: '#drawer-container', swap: 'innerHTML'
+            });
+        },
+
+        select: function (info) {
+            const params = new URLSearchParams({
+                date: info.startStr.slice(0, 10),
+                slot: info.startStr.slice(11, 16),
+            });
+            if (info.resource) params.set('resource_id', info.resource.id);
+            window.location = '/bookings/new?' + params.toString();
+        },
+
+        eventDrop: handleMove,
+        eventResize: handleMove,
+    });
+
+    function handleMove(info) {
+        const ev = info.event;
+        const body = {
+            start: ev.start.toISOString(),
+            end: ev.end.toISOString(),
+        };
+        if (ev.getResources()[0]) body.resource_id = ev.getResources()[0].id;
+
+        fetch('/api/calendar/booking/' + ev.id + '/move', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}',
+            },
+            body: JSON.stringify(body),
+        })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                alert(data.error === 'conflict' ? 'Конфликт: это время уже занято' : 'Ошибка переноса');
+                info.revert();
+            }
+        })
+        .catch(() => { alert('Сетевая ошибка'); info.revert(); });
+    }
+
+    calendar.render();
+
+    // Reload events when drawer modifies a booking
+    document.body.addEventListener('htmx:afterSwap', () => calendar.refetchEvents());
+});
+</script>
+{% endblock %}

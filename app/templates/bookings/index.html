@@ -1,0 +1,104 @@
+{% extends "_base.html" %}
+{% block title %}Брони{% endblock %}
+{% block topbar_title %}Брони{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Брони</h1>
+        <p class="sub">Полный журнал · найдено {{ bookings|length }}</p>
+    </div>
+    {% if current_user.is_manager %}
+    <a href="{{ url_for('bookings.new') }}" class="btn btn-primary">
+        <i data-lucide="plus"></i> Создать бронь
+    </a>
+    {% endif %}
+</div>
+
+<form method="GET" class="toolbar">
+    <div class="form-row"><label class="form-label">От</label>
+        <input type="date" name="date_from" class="input" value="{{ date_from }}"></div>
+    <div class="form-row"><label class="form-label">До</label>
+        <input type="date" name="date_to" class="input" value="{{ date_to }}"></div>
+    <div class="form-row"><label class="form-label">Статус</label>
+        <select name="status" class="select">
+            <option value="">Любой</option>
+            {% for st in statuses %}
+                <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st|status_label }}</option>
+            {% endfor %}
+        </select></div>
+    <div class="form-row"><label class="form-label">Оплата</label>
+        <select name="payment" class="select">
+            <option value="">Любая</option>
+            <option value="paid"   {% if payment == 'paid' %}selected{% endif %}>Оплачено</option>
+            <option value="unpaid" {% if payment == 'unpaid' %}selected{% endif %}>Не оплачено</option>
+        </select></div>
+    <button class="btn btn-outline"><i data-lucide="filter"></i> Фильтр</button>
+    {% if date_from or date_to or payment or status %}
+    <a href="{{ url_for('bookings.index') }}" class="btn btn-ghost">Сбросить</a>
+    {% endif %}
+</form>
+
+{% if bookings %}
+<div class="panel no-pad" style="overflow-x:auto">
+<table class="tbl">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Дата/время</th>
+            <th>Клиент</th>
+            <th>Услуга</th>
+            <th>Ресурс</th>
+            <th>Тренер</th>
+            <th class="text-right">Сумма</th>
+            <th>Оплата</th>
+            <th>Статус</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td class="num">{{ b.id }}</td>
+            <td class="nowrap">
+                <div>{{ b.starts_at.strftime('%d.%m.%Y') }}</div>
+                <div class="muted" style="font-size:12px">{{ b.starts_at|hm }}–{{ b.ends_at|hm }}</div>
+            </td>
+            <td>
+                {% if b.customer %}
+                    <a href="{{ url_for('customers.detail', cid=b.customer.id) }}">{{ b.customer.name }}</a>
+                    {% if b.customer.phone %}<div class="muted" style="font-size:12px">{{ b.customer.phone }}</div>{% endif %}
+                {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td>{{ b.service.name if b.service else '—' }}</td>
+            <td class="muted">{{ b.resource.name if b.resource else '—' }}</td>
+            <td class="muted">{{ b.instructor.name if b.instructor else '—' }}</td>
+            <td class="text-right"><span class="price">{{ b.total_kopecks|rub }}</span></td>
+            <td>
+                {% if b.payment_status == 'paid' %}
+                    <span class="badge pay-paid">Оплачено</span>
+                {% else %}
+                    <span class="badge pay-unpaid">{{ b.payment_status|status_label }}</span>
+                {% endif %}
+            </td>
+            <td><span class="badge status-{{ b.status }}">{{ b.status|status_label }}</span></td>
+            <td>
+                <button class="btn btn-ghost btn-sm"
+                        hx-get="{{ url_for('bookings.drawer', bid=b.id) }}"
+                        hx-target="#drawer-container" hx-swap="innerHTML">
+                    <i data-lucide="arrow-right"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">
+    <div class="icon">📋</div>
+    <div class="title">Броней не найдено</div>
+    <p>Измените фильтры или создайте новую бронь.</p>
+</div>
+{% endif %}
+{% endblock %}

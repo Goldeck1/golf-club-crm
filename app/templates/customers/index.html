@@ -1,0 +1,55 @@
+{% extends "_base.html" %}
+{% block title %}Клиенты{% endblock %}
+{% block topbar_title %}Клиенты{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>Клиенты клуба</h1><p class="sub">Всего: <strong>{{ customers|length }}</strong></p></div>
+    <a href="{{ url_for('customers.new') }}" class="btn btn-primary">
+        <i data-lucide="user-plus"></i> Новый клиент
+    </a>
+</div>
+
+<form method="GET" class="toolbar">
+    <div class="form-row" style="flex:1; min-width:280px">
+        <label class="form-label">Поиск</label>
+        <input type="text" name="q" class="input" value="{{ q }}" placeholder="ФИО, телефон, email" autofocus>
+    </div>
+    <button class="btn btn-outline"><i data-lucide="search"></i> Найти</button>
+    {% if q %}<a href="{{ url_for('customers.index') }}" class="btn btn-ghost">Сбросить</a>{% endif %}
+</form>
+
+{% if customers %}
+<div class="panel no-pad" style="overflow-x:auto">
+<table class="tbl">
+    <thead>
+        <tr><th>Клиент</th><th>Контакты</th><th class="text-right">Броней</th>
+            <th class="text-right">Оплачено</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for c in customers %}
+        <tr>
+            <td><a href="{{ url_for('customers.detail', cid=c.id) }}" style="font-weight:600; color:var(--ink-900)">{{ c.name }}</a></td>
+            <td class="muted">
+                {% if c.phone %}<div>📞 {{ c.phone }}</div>{% endif %}
+                {% if c.email %}<div>✉ {{ c.email }}</div>{% endif %}
+            </td>
+            <td class="text-right num">{{ stats[c.id].count }}</td>
+            <td class="text-right"><span class="price">{{ stats[c.id].paid|rub }}</span></td>
+            <td class="text-right">
+                <a href="{{ url_for('customers.detail', cid=c.id) }}" class="btn btn-ghost btn-sm">
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">
+    <div class="icon">👥</div>
+    <div class="title">Клиентов не найдено</div>
+</div>
+{% endif %}
+{% endblock %}

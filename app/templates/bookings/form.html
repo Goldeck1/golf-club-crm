@@ -1,0 +1,135 @@
+{% extends "_base.html" %}
+{% block title %}Новая бронь{% endblock %}
+{% block topbar_title %}Новая бронь{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Новая бронь</h1>
+        <p class="sub">Текущий сезон — <strong>{{ 'летний' if season == 'summer' else 'зимний' }}</strong>; вне-сезонные услуги скрыты</p>
+    </div>
+    <a href="{{ url_for('calendar.index') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> К тайм-шиту
+    </a>
+</div>
+
+<div class="panel" style="max-width: 1020px">
+<form method="POST" x-data="{ serviceId: null, basePrice: 0 }">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h3>1. Что бронируем</h3>
+    <div class="form-grid">
+        <div class="form-row">
+            <label>Услуга</label>
+            <select name="service_id" class="select" required
+                    x-ref="svc"
+                    @change="
+                        const opt = $event.target.selectedOptions[0];
+                        basePrice = parseInt(opt.dataset.price || 0);
+                        const guests = parseInt(opt.dataset.group || 1);
+                        document.querySelector('input[name=guests]').value = guests;
+                        document.querySelector('input[name=price_rub]').value = Math.floor(basePrice/100);
+                    ">
+                <option value="">— выберите услугу —</option>
+                {% for category, items in services_by_category.items() %}
+                    <optgroup label="{{ category }}">
+                    {% for s in items %}
+                        <option value="{{ s.id }}"
+                                data-price="{{ s.base_price_kopecks }}"
+                                data-group="{{ s.group_size or 1 }}"
+                                data-duration="{{ s.duration_min }}"
+                                data-needs-instructor="{{ '1' if s.requires_instructor else '0' }}">
+                            {{ s.name }} · {{ s.base_price_kopecks|rub }}
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Ресурс (конкретный бокс / лунка)</label>
+            <select name="resource_id" class="select">
+                <option value="">— без привязки —</option>
+                {% for zone_name, items in resources_by_zone.items() %}
+                    <optgroup label="{{ zone_name }}">
+                    {% for r in items %}
+                        <option value="{{ r.id }}">{{ r.name }}</option>
+                    {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <h3 class="mt-4">2. Клиент</h3>
+    <div class="form-grid">
+        <div class="form-row">
+            <label>Существующий</label>
+            <select name="client_id" class="select">
+                <option value="">— выбрать из списка —</option>
+                {% for c in clients %}
+                    <option value="{{ c.id }}">{{ c.name }}{% if c.phone %} · {{ c.phone }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Тренер</label>
+            <select name="instructor_id" class="select">
+                <option value="">— без тренера —</option>
+                {% for t in instructors %}
+                    <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="checkbox-row mb-3">
+        <i data-lucide="user-plus" style="width:16px;height:16px"></i>
+        <span>Или ввести нового клиента:</span>
+    </div>
+    <div class="form-grid">
+        <div class="form-row"><label>ФИО</label>
+            <input type="text" name="new_client_name" class="input" placeholder="Иванов Иван"></div>
+        <div class="form-row"><label>Телефон</label>
+            <input type="text" name="new_client_phone" class="input" placeholder="+7 (___) ___-__-__"></div>
+    </div>
+
+    <h3 class="mt-4">3. Когда и сколько</h3>
+    <div class="form-grid">
+        <div class="form-row"><label>Дата</label>
+            <input type="date" name="date" class="input" required value="{{ today }}"></div>
+        <div class="form-row"><label>Начало</label>
+            <select name="slot" class="select" required>
+                {% for h in range(8, 22) %}
+                    {% for m in ('00', '30') %}
+                        <option value="{{ '%02d' % h }}:{{ m }}">{{ '%02d' % h }}:{{ m }}</option>
+                    {% endfor %}
+                {% endfor %}
+            </select></div>
+    </div>
+    <div class="form-grid">
+        <div class="form-row"><label>Продолжительность (ч)</label>
+            <input type="number" name="duration" class="input" step="0.5" min="0.5" value="1" required></div>
+        <div class="form-row"><label>Гостей</label>
+            <input type="number" name="guests" class="input" min="1" max="20" value="1"></div>
+    </div>
+    <label class="checkbox-row"><input type="checkbox" name="with_guest"> С гостем</label>
+
+    <h3 class="mt-4">4. Оплата</h3>
+    <div class="form-grid">
+        <div class="form-row"><label>Стоимость, ₽</label>
+            <input type="number" name="price_rub" class="input" min="0" value="0">
+            <p class="hint">Подставляется автоматически из услуги, можно скорректировать</p>
+        </div>
+        <div class="form-row"><label>Комментарий</label>
+            <textarea name="comment" class="textarea" placeholder="Особые пожелания, номер абонемента..."></textarea></div>
+    </div>
+
+    <div class="row mt-4">
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="check"></i> Создать бронь
+        </button>
+        <a href="{{ url_for('calendar.index') }}" class="btn btn-outline">Отменить</a>
+    </div>
+</form>
+</div>
+{% endblock %}

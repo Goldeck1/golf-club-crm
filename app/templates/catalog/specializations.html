@@ -1,0 +1,66 @@
+{% extends "_base.html" %}
+{% block title %}Специализации{% endblock %}
+{% block topbar_title %}Справочник специализаций{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Специализации тренеров</h1>
+        <p class="sub">Справочник · используется в конструкторе тренера для авто-подбора услуг</p>
+    </div>
+    {% if current_user.is_manager %}
+    <a href="{{ url_for('catalog.new_specialization') }}" class="btn btn-primary">
+        <i data-lucide="plus"></i> Добавить
+    </a>
+    {% endif %}
+</div>
+
+<div class="panel no-pad">
+<table class="tbl">
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Код</th>
+            <th>Применимые категории услуг</th>
+            <th>Описание</th>
+            <th>Статус</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for sp in specs %}
+        <tr {% if not sp.active %}style="opacity:0.5"{% endif %}>
+            <td><strong>{{ sp.name }}</strong></td>
+            <td class="muted"><code>{{ sp.code }}</code></td>
+            <td>
+                {% for cat in sp.applicable_categories %}
+                    <span class="badge badge-green">{{ cat }}</span>
+                {% endfor %}
+            </td>
+            <td class="muted" style="font-size:13px">{{ sp.description }}</td>
+            <td>
+                {% if sp.active %}<span class="badge badge-green">Активна</span>
+                {% else %}<span class="badge badge-gray">Выключена</span>{% endif %}
+            </td>
+            <td class="text-right">
+                {% if current_user.is_manager %}
+                <a href="{{ url_for('catalog.edit_specialization', sid=sp.id) }}" class="btn btn-ghost btn-sm">
+                    <i data-lucide="pencil"></i>
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="panel mt-4">
+    <h3>Как это работает</h3>
+    <p class="muted" style="font-size:13px">
+        Специализация — это ярлык, который говорит: «этот тренер умеет делать такие-то занятия».
+        При создании/правке тренера выбираете его специализации — и система
+        автоматически предлагает услуги из связанных категорий, где можно проставить его персональный прайс.
+    </p>
+</div>
+{% endblock %}

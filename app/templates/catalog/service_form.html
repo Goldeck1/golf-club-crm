@@ -1,0 +1,168 @@
+{% extends "_base.html" %}
+{% block title %}{{ service.name }}{% endblock %}
+{% block topbar_title %}Редактирование услуги{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ service.name }}</h1>
+        <p class="sub">
+            <code>{{ service.sku }}</code> · категория: <strong>{{ service.category }}</strong> ·
+            базовая цена: <strong>{{ service.base_price_kopecks|rub }}</strong>
+        </p>
+    </div>
+    <a href="{{ url_for('catalog.services') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> К списку
+    </a>
+</div>
+
+<div class="grid grid-2" style="align-items: start">
+
+<div class="panel">
+<h3>Параметры услуги</h3>
+<form method="POST" x-data="{ price: {{ service.base_price_kopecks // 100 }}, initial: {{ service.base_price_kopecks // 100 }} }">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-row"><label>Название</label>
+        <input type="text" name="name" class="input" required value="{{ service.name }}"></div>
+
+    <div class="form-grid">
+        <div class="form-row"><label>Длительность (мин)</label>
+            <input type="number" name="duration_min" class="input" min="15" step="15"
+                   value="{{ service.duration_min }}"></div>
+        <div class="form-row"><label>Группа (чел)</label>
+            <input type="number" name="group_size" class="input" min="1" max="20"
+                   value="{{ service.group_size or '' }}" placeholder="не указано"></div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-row"><label>Сезон</label>
+            <select name="season" class="select">
+                <option value="all_year" {% if service.season == 'all_year' %}selected{% endif %}>Круглый год</option>
+                <option value="summer"   {% if service.season == 'summer' %}selected{% endif %}>Только лето</option>
+                <option value="winter"   {% if service.season == 'winter' %}selected{% endif %}>Только зима</option>
+            </select></div>
+        <div class="form-row"><label>Базовая цена, ₽</label>
+            <input type="number" name="price_rub" class="input" min="0" step="100"
+                   x-model="price"
+                   @input.debounce.400ms="
+                        if (price != initial) {
+                            fetch('{{ url_for('catalog.cascade_preview', sid=service.id) }}?price_rub=' + price)
+                                .then(r => r.json()).then(d => { window.cascadeData = d; htmx.trigger('#cascade-preview', 'refresh'); });
+                        }
+                   "></div>
+    </div>
+
+    <div class="grid grid-3" style="gap:8px; margin-bottom: 16px">
+        <label class="checkbox-row">
+            <input type="checkbox" name="is_trial" {% if service.is_trial %}checked{% endif %}>
+            <span>Пробная</span>
+        </label>
+        <label class="checkbox-row">
+            <input type="checkbox" name="is_kids" {% if service.is_kids %}checked{% endif %}>
+            <span>Детская</span>
+        </label>
+        <label class="checkbox-row">
+            <input type="checkbox" name="requires_instructor" {% if service.requires_instructor %}checked{% endif %}>
+            <span>Нужен тренер</span>
+        </label>
+    </div>
+
+    <div class="form-row"><label>Описание</label>
+        <textarea name="description" class="textarea">{{ service.description }}</textarea></div>
+
+    <!-- Cascade apply option -->
+    <label class="checkbox-row" style="border-color: var(--gold-400); background: #FFF9E9"
+           x-show="price != initial">
+        <input type="checkbox" name="apply_to_bookings" value="1">
+        <span>
+            <strong>Применить новую цену к активным не оплаченным броням</strong>
+            <div class="muted" style="font-size:12px; margin-top:4px">
+                Оплаченные и завершённые брони никогда не изменяются — они заморожены.
+            </div>
+        </span>
+    </label>
+
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+        <a href="{{ url_for('catalog.services') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+
+<!-- Правая колонка: cascade preview -->
+<div>
+    <div class="panel" id="cascade-preview">
+        <h3>Предпросмотр изменения цены</h3>
+
+        {% if preview %}
+            <div class="muted mb-2" style="font-size:13px">
+                {{ preview.old_price_kopecks|rub }} → <strong>{{ preview.new_price_kopecks|rub }}</strong>
+                <span class="badge badge-{{ 'red' if preview.delta_per_booking < 0 else 'green' }}">
+                    {% if preview.delta_per_booking > 0 %}+{% endif %}{{ (preview.delta_per_booking // 100) }} ₽ на бронь
+                </span>
+            </div>
+
+            <div class="grid grid-2 mb-3">
+                <div class="stat">
+                    <div class="label">Активных броней затронется</div>
+                    <div class="value">{{ preview.affected_count }}</div>
+                </div>
+                <div class="stat stat-accent">
+                    <div class="label">Суммарный дифф</div>
+                    <div class="value">
+                        {% if preview.total_delta_kopecks > 0 %}+{% endif %}{{ preview.total_delta_kopecks|rub }}
+                    </div>
+                </div>
+            </div>
+
+            {% if preview.frozen_bookings_count %}
+            <p class="muted" style="font-size:13px">
+                <i data-lucide="lock" style="width:14px;height:14px;vertical-align:middle"></i>
+                Заморожено (paid/completed): <strong>{{ preview.frozen_bookings_count }}</strong> — не изменятся никогда.
+            </p>
+            {% endif %}
+
+            {% if preview.affected_bookings %}
+            <h3 style="font-size:14px; margin-top:16px">Брони, которые изменятся</h3>
+            <table class="tbl">
+                <thead><tr>
+                    <th>Клиент</th><th>Дата</th>
+                    <th class="text-right">Было</th>
+                    <th class="text-right">Станет</th>
+                </tr></thead>
+                <tbody>
+                {% for a in preview.affected_bookings[:20] %}
+                <tr>
+                    <td>{{ a.customer_name }}</td>
+                    <td class="muted nowrap">{{ a.starts_at[:16].replace('T', ' ') }}</td>
+                    <td class="text-right muted">{{ a.old_total|rub }}</td>
+                    <td class="text-right"><strong>{{ a.new_total|rub }}</strong></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% if preview.affected_bookings|length > 20 %}
+                <p class="muted mt-2">+ ещё {{ preview.affected_bookings|length - 20 }} броней</p>
+            {% endif %}
+            {% endif %}
+        {% else %}
+            <p class="muted">
+                Измени цену слева — здесь появится разбор:
+                сколько будущих неоплаченных броней затронется и на сколько.
+            </p>
+
+            <div class="mt-3" style="padding: 12px; background: var(--cream-50); border-radius: 10px; font-size: 13px">
+                <strong>Логика immutability:</strong>
+                <ul style="margin: 6px 0; padding-left: 18px">
+                    <li>Оплаченные брони — <strong>никогда</strong> не меняются</li>
+                    <li>Завершённые брони — заморожены</li>
+                    <li>Черновики, удержания, подтверждённые без оплаты — пересчитываются по согласию</li>
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+</div>
+{% endblock %}

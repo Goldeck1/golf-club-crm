@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ CLUB_NAME }} — {% block title %}{% endblock %}</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<div class="app">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">⛳</div>
+            <div>
+                <div class="brand-title">GolfAdmin</div>
+                <div class="brand-sub">{{ CLUB_NAME.split('·')[-1].strip() if '·' in CLUB_NAME else CLUB_NAME }}</div>
+            </div>
+        </div>
+
+        <nav class="nav-group">
+            <div class="nav-section">Обзор</div>
+            <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.blueprint == 'dashboard' %}is-active{% endif %}">
+                <i data-lucide="layout-dashboard"></i><span>Сводка</span>
+            </a>
+            <a href="{{ url_for('calendar.index') }}" class="nav-item {% if request.blueprint == 'calendar' %}is-active{% endif %}">
+                <i data-lucide="calendar-days"></i><span>Тайм-шит</span>
+            </a>
+            <a href="{{ url_for('bookings.index') }}" class="nav-item {% if request.blueprint == 'bookings' %}is-active{% endif %}">
+                <i data-lucide="bookmark"></i><span>Брони</span>
+            </a>
+
+            <div class="nav-section">Клиентская база</div>
+            <a href="{{ url_for('customers.index') }}" class="nav-item {% if request.blueprint == 'customers' %}is-active{% endif %}">
+                <i data-lucide="users"></i><span>Клиенты</span>
+            </a>
+            <a href="{{ url_for('catalog.instructors') }}" class="nav-item {% if request.endpoint in ('catalog.instructors', 'catalog.new_instructor', 'catalog.edit_instructor') %}is-active{% endif %}">
+                <i data-lucide="user-cog"></i><span>Тренеры</span>
+            </a>
+            <a href="{{ url_for('catalog.memberships') }}" class="nav-item {% if request.endpoint in ('catalog.memberships', 'catalog.edit_membership') %}is-active{% endif %}">
+                <i data-lucide="award"></i><span>Членство</span>
+            </a>
+
+            <div class="nav-section">Каталог</div>
+            <a href="{{ url_for('catalog.services') }}" class="nav-item {% if request.endpoint in ('catalog.services', 'catalog.edit_service') %}is-active{% endif %}">
+                <i data-lucide="tag"></i><span>Услуги и прайс</span>
+            </a>
+            <a href="{{ url_for('catalog.resources') }}" class="nav-item {% if request.endpoint in ('catalog.resources', 'catalog.edit_resource') %}is-active{% endif %}">
+                <i data-lucide="map-pin"></i><span>Ресурсы</span>
+            </a>
+            <a href="{{ url_for('catalog.specializations') }}" class="nav-item {% if request.endpoint in ('catalog.specializations', 'catalog.new_specialization', 'catalog.edit_specialization') %}is-active{% endif %}">
+                <i data-lucide="award"></i><span>Специализации</span>
+            </a>
+
+            {% if current_user.is_admin %}
+            <div class="nav-section">Администрирование</div>
+            <a href="{{ url_for('admin.staff') }}" class="nav-item {% if request.endpoint in ('admin.staff', 'admin.new_staff') %}is-active{% endif %}">
+                <i data-lucide="shield"></i><span>Сотрудники</span>
+            </a>
+            <a href="{{ url_for('admin.audit') }}" class="nav-item {% if request.endpoint == 'admin.audit' %}is-active{% endif %}">
+                <i data-lucide="file-search"></i><span>История действий</span>
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="nav-item {% if request.endpoint == 'admin.settings' %}is-active{% endif %}">
+                <i data-lucide="settings"></i><span>Настройки</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-foot">
+            <div class="user-chip">
+                <div class="user-avatar">{{ current_user.name[:1]|upper }}</div>
+                <div class="user-meta">
+                    <div class="user-name">{{ current_user.name }}</div>
+                    <div class="user-role">
+                        {% if current_user.is_admin %}Администратор
+                        {% elif current_user.role == 'manager' %}Менеджер
+                        {% elif current_user.role == 'accounting' %}Бухгалтерия
+                        {% else %}Сотрудник{% endif %}
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('auth.logout') }}" class="logout-link" title="Выйти">
+                <i data-lucide="log-out"></i>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div class="crumbs">
+                <span class="crumb-club">{{ CLUB_NAME }}</span>
+                <span class="crumb-sep">/</span>
+                <span class="crumb-page">{% block topbar_title %}{% endblock %}</span>
+            </div>
+            <div class="topbar-right row" style="gap:12px">
+                <button class="cmdk-hint"
+                        @click="$dispatch('keydown', {key: 'k', ctrlKey: true, bubbles: true})"
+                        onclick="document.dispatchEvent(new KeyboardEvent('keydown', {key: 'k', ctrlKey: true}))">
+                    <i data-lucide="search" style="width:12px;height:12px"></i>
+                    Поиск
+                    <kbd class="cmdk-kbd">Ctrl K</kbd>
+                </button>
+                <div class="season-chip season-{{ current_season }}">
+                    {% if current_season == 'summer' %}
+                        <i data-lucide="sun"></i> Летний сезон
+                    {% else %}
+                        <i data-lucide="snowflake"></i> Зимний сезон
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-stack">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+
+        <footer class="pagefoot">
+            {{ CLUB_NAME }} · GolfAdmin © 2026
+        </footer>
+    </main>
+
+    <!-- Панель брони (HTMX target) -->
+    <div id="drawer-container"></div>
+
+    <!-- Глобальный поиск Cmd+K / Ctrl+K -->
+    <div
+        x-data="{
+            open: false, q: '', results: [], highlight: 0, loading: false,
+            async fetchResults() {
+                if (this.q.length < 2) { this.results = []; return; }
+                this.loading = true;
+                try {
+                    const r = await fetch('/api/search?q=' + encodeURIComponent(this.q));
+                    this.results = await r.json();
+                    this.highlight = 0;
+                } finally { this.loading = false; }
+            },
+            goto(url) { window.location = url; },
+            kindLabel(k) {
+                return {client:'Клиент', instructor:'Тренер', service:'Услуга', booking:'Бронь'}[k] || k;
+            }
+        }"
+        @keydown.window.prevent.ctrl.k="open = true; $nextTick(() => $refs.q.focus())"
+        @keydown.window.prevent.meta.k="open = true; $nextTick(() => $refs.q.focus())"
+        @keydown.window.escape="open = false"
+    >
+    <div x-show="open" x-transition.opacity
+         class="cmdk-backdrop"
+         @click="open = false"
+         style="display:none">
+        <div class="cmdk-palette" @click.stop>
+            <div class="cmdk-input-wrap">
+                <i data-lucide="search" style="width:18px;height:18px;color:var(--ink-500)"></i>
+                <input x-ref="q" x-model="q" @input.debounce.250ms="fetchResults()"
+                       @keydown.down.prevent="highlight = Math.min(highlight + 1, results.length - 1)"
+                       @keydown.up.prevent="highlight = Math.max(highlight - 1, 0)"
+                       @keydown.enter="if (results[highlight]) goto(results[highlight].url)"
+                       class="cmdk-input" placeholder="Поиск: клиент, бронь (#id), тренер, услуга...">
+                <kbd class="cmdk-kbd">Esc</kbd>
+            </div>
+            <div class="cmdk-results">
+                <template x-if="loading">
+                    <div class="cmdk-empty">Ищу...</div>
+                </template>
+                <template x-if="!loading && q.length >= 2 && results.length === 0">
+                    <div class="cmdk-empty">Ничего не найдено</div>
+                </template>
+                <template x-if="!loading && q.length < 2">
+                    <div class="cmdk-empty">
+                        Начни вводить — ищем по клиентам, броням (по ID), тренерам, услугам.
+                        <div style="margin-top:8px; font-size:11px">
+                            <kbd class="cmdk-kbd">↑↓</kbd> навигация ·
+                            <kbd class="cmdk-kbd">Enter</kbd> открыть ·
+                            <kbd class="cmdk-kbd">Esc</kbd> закрыть
+                        </div>
+                    </div>
+                </template>
+                <template x-for="(r, idx) in results" :key="r.kind + r.url">
+                    <a :href="r.url" class="cmdk-item" :class="{ 'is-active': idx === highlight }"
+                       @mouseenter="highlight = idx">
+                        <i :data-lucide="r.icon" style="width:18px;height:18px"></i>
+                        <div style="flex:1; min-width:0">
+                            <div x-text="r.title" style="font-weight:600"></div>
+                            <div x-text="r.subtitle" class="muted" style="font-size:12px"></div>
+                        </div>
+                        <span class="badge badge-gray" x-text="kindLabel(r.kind)"></span>
+                    </a>
+                </template>
+            </div>
+        </div>
+    </div>
+    </div>
+
+</div>
+{% else %}
+<div class="auth-shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-stack auth-flash">
+        {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+</div>
+{% endif %}
+
+<script>
+function renderIcons() { if (window.lucide) window.lucide.createIcons(); }
+document.addEventListener('DOMContentLoaded', renderIcons);
+document.body.addEventListener('htmx:afterSwap', renderIcons);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

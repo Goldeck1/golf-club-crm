@@ -1,0 +1,54 @@
+{% extends "_base.html" %}
+{% block title %}История действий{% endblock %}
+{% block topbar_title %}История действий{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>История действий</h1><p class="sub">Последние 500 записей</p></div>
+</div>
+
+<form method="GET" class="toolbar">
+    <div class="form-row"><label class="form-label">Сущность</label>
+        <select name="entity" class="select" onchange="this.form.submit()">
+            <option value="">Все</option>
+            <option value="booking" {% if entity == 'booking' %}selected{% endif %}>Бронь</option>
+            <option value="user" {% if entity == 'user' %}selected{% endif %}>Пользователь</option>
+        </select></div>
+    <div class="form-row"><label class="form-label">Действие</label>
+        <select name="action" class="select" onchange="this.form.submit()">
+            <option value="">Все</option>
+            <option value="create"        {% if action == 'create' %}selected{% endif %}>Создание</option>
+            <option value="update"        {% if action == 'update' %}selected{% endif %}>Изменение</option>
+            <option value="status_change" {% if action == 'status_change' %}selected{% endif %}>Смена статуса</option>
+            <option value="cancel"        {% if action == 'cancel' %}selected{% endif %}>Отмена</option>
+            <option value="no_show"       {% if action == 'no_show' %}selected{% endif %}>Неявка</option>
+            <option value="check_in"      {% if action == 'check_in' %}selected{% endif %}>Регистрация</option>
+            <option value="payment"       {% if action == 'payment' %}selected{% endif %}>Оплата</option>
+            <option value="login"         {% if action == 'login' %}selected{% endif %}>Вход</option>
+            <option value="login_failed"  {% if action == 'login_failed' %}selected{% endif %}>Ошибка входа</option>
+        </select></div>
+</form>
+
+{% if entries %}
+<div class="panel no-pad" style="overflow-x:auto">
+<table class="tbl">
+    <thead><tr><th>Время</th><th>Сотрудник</th><th>Действие</th><th>Сущность</th>
+               <th>Описание</th><th>IP</th></tr></thead>
+    <tbody>
+        {% for e in entries %}
+        <tr>
+            <td class="nowrap muted">{{ e.at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+            <td><strong>{{ e.actor_username or 'system' }}</strong></td>
+            <td><span class="badge badge-gray">{{ e.action }}</span></td>
+            <td class="muted">{{ e.entity }}{% if e.entity_id %}#{{ e.entity_id }}{% endif %}</td>
+            <td>{{ e.summary }}</td>
+            <td class="muted">{{ e.ip }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty"><div class="icon">📜</div><div class="title">Записей не найдено</div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "_base.html" %}
+{% block title %}Ресурс {{ resource.name }}{% endblock %}
+{% block topbar_title %}Настройка ресурса{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ resource.name }}</h1>
+        <p class="sub">
+            <code>{{ resource.code }}</code> · {{ resource.zone.name }} · тип: {{ resource.resource_type.name }}
+        </p>
+    </div>
+    <a href="{{ url_for('catalog.resources') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> К ресурсам
+    </a>
+</div>
+
+<div class="panel" style="max-width: 820px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h3>Параметры</h3>
+    <div class="form-grid">
+        <div class="form-row"><label>Название</label>
+            <input type="text" name="name" class="input" value="{{ resource.name }}" required></div>
+        <div class="form-row"><label>Код</label>
+            <input type="text" name="code" class="input" value="{{ resource.code }}" required></div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-row"><label>Вместимость (чел/мест)</label>
+            <input type="number" name="capacity" class="input" min="1" value="{{ resource.capacity }}"></div>
+        <div class="form-row"><label>Сезон</label>
+            <select name="season" class="select">
+                <option value="all_year" {% if resource.season == 'all_year' %}selected{% endif %}>Круглый год</option>
+                <option value="summer"   {% if resource.season == 'summer' %}selected{% endif %}>Только лето</option>
+                <option value="winter"   {% if resource.season == 'winter' %}selected{% endif %}>Только зима</option>
+            </select></div>
+    </div>
+
+    <div class="form-row"><label>Цвет на тайм-шите</label>
+        <input type="color" name="color" value="{{ resource.color or resource.resource_type.color }}"
+               style="width:60px; height:36px; padding:2px; border:1px solid var(--border); border-radius:8px">
+        <p class="hint">Оставь пусто — будет цвет типа ресурса.</p>
+    </div>
+
+    <h3 class="mt-4">Какие услуги можно проводить</h3>
+    <p class="hint">
+        Если ничего не выбрать — на этом ресурсе доступны <strong>любые</strong> услуги (по умолчанию).
+        Выбор сужает список: полезно для симуляторов, бильярда, специализированных боксов.
+    </p>
+    <div class="grid grid-2" style="gap:8px; margin-top:8px; max-height: 380px; overflow-y: auto">
+        {% for svc in all_services %}
+        <label class="checkbox-row">
+            <input type="checkbox" name="services" value="{{ svc.id }}"
+                   {% if svc.id in assigned_service_ids %}checked{% endif %}>
+            <span>
+                <strong>{{ svc.name }}</strong>
+                <div class="muted" style="font-size:11px">{{ svc.category }} · {{ svc.base_price_kopecks|rub }}</div>
+            </span>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+        <a href="{{ url_for('catalog.resources') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+{% endblock %}

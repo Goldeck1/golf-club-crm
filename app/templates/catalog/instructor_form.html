@@ -1,0 +1,222 @@
+{% extends "_base.html" %}
+{% block title %}{{ 'Тренер · ' ~ instructor.name if instructor else 'Новый тренер' }}{% endblock %}
+{% block topbar_title %}{{ 'Конструктор тренера' if instructor else 'Новый тренер' }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ instructor.name if instructor else 'Новый тренер' }}</h1>
+        {% if instructor %}
+            <p class="sub">
+                Профиль, специализации, услуги с персональным прайсом, ресурсы, часы работы
+            </p>
+        {% else %}
+            <p class="sub">Шаг 1: базовый профиль + специализации. После сохранения откроется расширенная настройка.</p>
+        {% endif %}
+    </div>
+    <a href="{{ url_for('catalog.instructors') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> К списку
+    </a>
+</div>
+
+{% if not instructor %}
+<!-- NEW-режим: простая форма с профилем и спецами -->
+<div class="panel" style="max-width:820px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h3>1. Профиль</h3>
+    <div class="form-row"><label>ФИО *</label>
+        <input type="text" name="name" class="input" required autofocus></div>
+    <div class="form-grid">
+        <div class="form-row"><label>Телефон</label>
+            <input type="text" name="phone" class="input"></div>
+        <div class="form-row"><label>Email</label>
+            <input type="email" name="email" class="input"></div>
+    </div>
+    <div class="form-row"><label>Краткая биография</label>
+        <textarea name="bio" class="textarea" placeholder="PGA Pro, 15 лет опыта..."></textarea></div>
+    <div class="form-row"><label>Цвет на тайм-шите</label>
+        <input type="color" name="color" value="#C9A961" style="width:60px; height:36px; padding:2px; border:1px solid var(--border); border-radius:8px"></div>
+
+    <h3 class="mt-4">2. Специализации</h3>
+    <p class="hint">Выберите всё, что умеет тренер. На их основе система подскажет подходящие услуги на следующем шаге.</p>
+    <div class="grid grid-2" style="gap:8px; margin-top:8px">
+        {% for sp in all_specs %}
+        <label class="checkbox-row">
+            <input type="checkbox" name="specializations" value="{{ sp.id }}">
+            <span><strong>{{ sp.name }}</strong><br><span class="muted" style="font-size:12px">{{ sp.description }}</span></span>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="arrow-right"></i> Создать и настроить дальше</button>
+        <a href="{{ url_for('catalog.instructors') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+
+{% else %}
+<!-- EDIT-режим: расширенный конструктор с табами -->
+<div x-data="{ tab: 'profile' }">
+<div class="tabs">
+    <a class="tab" :class="{'is-active': tab === 'profile'}" @click.prevent="tab='profile'" href="#">
+        <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle"></i> Профиль
+    </a>
+    <a class="tab" :class="{'is-active': tab === 'services'}" @click.prevent="tab='services'" href="#">
+        <i data-lucide="tag" style="width:14px;height:14px;vertical-align:middle"></i> Услуги и цены
+    </a>
+    <a class="tab" :class="{'is-active': tab === 'resources'}" @click.prevent="tab='resources'" href="#">
+        <i data-lucide="map-pin" style="width:14px;height:14px;vertical-align:middle"></i> Ресурсы
+    </a>
+    <a class="tab" :class="{'is-active': tab === 'hours'}" @click.prevent="tab='hours'" href="#">
+        <i data-lucide="clock" style="width:14px;height:14px;vertical-align:middle"></i> График
+    </a>
+</div>
+
+<!-- Таб: Профиль + Специализации + Ресурсы + Часы (в одной форме) -->
+<div x-show="tab !== 'services'">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="save">
+
+    <!-- Профиль -->
+    <div x-show="tab === 'profile'" class="panel">
+        <h3>Профиль</h3>
+        <div class="form-row"><label>ФИО</label>
+            <input type="text" name="name" class="input" required value="{{ instructor.name }}"></div>
+        <div class="form-grid">
+            <div class="form-row"><label>Телефон</label>
+                <input type="text" name="phone" class="input" value="{{ instructor.phone }}"></div>
+            <div class="form-row"><label>Email</label>
+                <input type="email" name="email" class="input" value="{{ instructor.email }}"></div>
+        </div>
+        <div class="form-row"><label>Биография</label>
+            <textarea name="bio" class="textarea">{{ instructor.bio }}</textarea></div>
+        <div class="form-row"><label>Цвет на тайм-шите</label>
+            <input type="color" name="color" value="{{ instructor.color }}" style="width:60px; height:36px; padding:2px; border:1px solid var(--border); border-radius:8px"></div>
+
+        <h3 class="mt-4">Специализации</h3>
+        <p class="hint">От выбора зависят услуги, которые будут подсвечены во вкладке «Услуги и цены».</p>
+        <div class="grid grid-2" style="gap:8px; margin-top:8px">
+            {% for sp in all_specs %}
+            <label class="checkbox-row">
+                <input type="checkbox" name="specializations" value="{{ sp.id }}"
+                       {% if sp.id in assigned_spec_ids %}checked{% endif %}>
+                <span><strong>{{ sp.name }}</strong><br><span class="muted" style="font-size:12px">{{ sp.description }}</span></span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div class="row mt-4">
+            <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить профиль</button>
+        </div>
+    </div>
+
+    <!-- Ресурсы -->
+    <div x-show="tab === 'resources'" class="panel">
+        <h3>На каких ресурсах может проводить занятия</h3>
+        <p class="hint">Можно не указывать — тогда тренер доступен на любом ресурсе.</p>
+        <div class="grid grid-3" style="gap:8px; margin-top:8px">
+            {% for r in all_resources %}
+            <label class="checkbox-row">
+                <input type="checkbox" name="resources" value="{{ r.id }}"
+                       {% if r.id in assigned_resource_ids %}checked{% endif %}>
+                <span>
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:{{ r.display_color }}; vertical-align:middle; margin-right:6px"></span>
+                    <strong>{{ r.name }}</strong>
+                    <div class="muted" style="font-size:11px">{{ r.zone.name }}</div>
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+        <div class="row mt-4">
+            <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить ресурсы</button>
+        </div>
+    </div>
+
+    <!-- Часы работы -->
+    <div x-show="tab === 'hours'" class="panel">
+        <h3>График работы тренера</h3>
+        <p class="hint">Если поля пусты — тренер работает по общим часам клуба (08:00–22:00).</p>
+        <table class="tbl" style="margin-top:8px">
+            <thead><tr><th>День</th><th>Начало</th><th>Конец</th></tr></thead>
+            <tbody>
+                {% for code, label in weekdays %}
+                {% set wh = instructor.working_hours.get(code) if instructor.working_hours else None %}
+                <tr>
+                    <td><strong>{{ label }}</strong></td>
+                    <td><input type="time" name="wh_{{ code }}_open" class="input" style="width:130px"
+                               value="{{ wh[0] if wh else '' }}"></td>
+                    <td><input type="time" name="wh_{{ code }}_close" class="input" style="width:130px"
+                               value="{{ wh[1] if wh else '' }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="row mt-4">
+            <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить график</button>
+        </div>
+    </div>
+</form>
+</div>
+
+<!-- Таб: Услуги с персональными ценами (отдельные мини-формы по строкам) -->
+<div x-show="tab === 'services'" class="panel">
+    <h3>Услуги тренера и персональный прайс</h3>
+    <p class="hint">
+        Галочкой подсвечены услуги, которые подходят выбранным специализациям.
+        Для любой услуги можно задать <strong>персональный прайс</strong> — он перекроет базовую цену в брони.
+        Оставь поле пустым (или «0»), чтобы использовать базовую.
+    </p>
+
+    <table class="tbl" style="margin-top: 12px">
+        <thead>
+            <tr>
+                <th>Услуга</th>
+                <th>Категория</th>
+                <th class="text-right">База</th>
+                <th class="text-right">Прайс тренера, ₽</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in services_tagged %}
+            <tr {% if not item.matches_spec and item.override_kopecks is none %}style="opacity:0.5"{% endif %}>
+                <td>
+                    <strong>{{ item.svc.name }}</strong>
+                    {% if item.matches_spec %}
+                        <span class="badge badge-green" title="Подходит спец-и">✓ по спец-и</span>
+                    {% endif %}
+                </td>
+                <td class="muted">{{ item.svc.category }}</td>
+                <td class="text-right muted">{{ item.svc.base_price_kopecks|rub }}</td>
+                <td class="text-right">
+                    <form method="POST" style="display:inline-flex; gap:6px; align-items:center">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="set_service_price">
+                        <input type="hidden" name="service_id" value="{{ item.svc.id }}">
+                        <input type="number" name="price_rub" class="input" style="width:110px; text-align:right"
+                               min="0" step="100"
+                               value="{{ (item.override_kopecks // 100) if item.override_kopecks else '' }}"
+                               placeholder="base">
+                        <button type="submit" class="btn btn-ghost btn-sm" title="Сохранить">
+                            <i data-lucide="save"></i>
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    {% if item.override_kopecks %}
+                        <span class="badge badge-gold">Override</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</div>
+{% endif %}
+{% endblock %}

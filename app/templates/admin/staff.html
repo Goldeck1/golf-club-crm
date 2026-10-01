@@ -1,0 +1,43 @@
+{% extends "_base.html" %}
+{% block title %}Сотрудники{% endblock %}
+{% block topbar_title %}Сотрудники{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>Сотрудники</h1><p class="sub">Пользователи системы · роли и доступ</p></div>
+    <a href="{{ url_for('admin.new_staff') }}" class="btn btn-primary">
+        <i data-lucide="user-plus"></i> Добавить
+    </a>
+</div>
+
+<div class="panel no-pad">
+<table class="tbl">
+    <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Последний вход</th><th></th></tr></thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td><strong>{{ u.name }}</strong></td>
+            <td><code>{{ u.username }}</code></td>
+            <td>
+                {% if u.role == 'admin' %}<span class="badge badge-red">Администратор</span>
+                {% elif u.role == 'manager' %}<span class="badge badge-blue">Менеджер</span>
+                {% elif u.role == 'accounting' %}<span class="badge badge-gold">Бухгалтерия</span>
+                {% else %}<span class="badge badge-green">Сотрудник</span>{% endif %}
+            </td>
+            <td class="muted">{{ u.last_login_at.strftime('%d.%m.%Y %H:%M') if u.last_login_at else '—' }}</td>
+            <td class="text-right">
+                {% if u.id != current_user.id %}
+                <form method="POST" action="{{ url_for('admin.delete_staff', uid=u.id) }}" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-danger btn-sm" onclick="return confirm('Удалить {{ u.name }}?')">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </form>
+                {% else %}<span class="dim">это вы</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

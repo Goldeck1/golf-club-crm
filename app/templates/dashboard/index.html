@@ -1,0 +1,316 @@
+{% extends "_base.html" %}
+{% block title %}Сводка{% endblock %}
+{% block topbar_title %}Сводка{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(14, 1fr);
+    gap: 2px;
+    font-size: 10px;
+}
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--ink-100);
+    position: relative;
+    cursor: help;
+    transition: transform 0.1s;
+}
+.heatmap-cell:hover { transform: scale(1.2); z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.heatmap-label {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-500); font-weight: 600;
+}
+.util-bar {
+    height: 24px;
+    background: var(--ink-100);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.util-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-500) 0%, var(--gold-500) 100%);
+    transition: width 0.3s;
+}
+.util-bar-label {
+    position: absolute; top: 0; left: 8px; right: 8px; bottom: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 600; color: var(--ink-900);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Добрый день, {{ current_user.name.split()[0] }}</h1>
+        <p class="sub">
+            Обзор клуба на {{ 'сегодня · ' + ('летний' if season == 'summer' else 'зимний') + ' сезон' }}
+            · {{ resources_count }} активных ресурсов
+        </p>
+    </div>
+    {% if current_user.is_manager %}
+    <a href="{{ url_for('bookings.new') }}" class="btn btn-gold">
+        <i data-lucide="plus"></i> Создать бронь
+    </a>
+    {% endif %}
+</div>
+
+<!-- KPI Row -->
+<div class="grid grid-5 mb-4">
+    <div class="stat">
+        <div class="label">Бронирований сегодня</div>
+        <div class="value">{{ today_count }}</div>
+        <div class="diff">активных сейчас: {{ total_active }}</div>
+    </div>
+    <div class="stat stat-accent">
+        <div class="label">Выручка за 30 дней</div>
+        <div class="value" style="font-size: 28px">{{ month_revenue|rub }}</div>
+        <div class="diff">{{ month_count }} броней · за неделю {{ week_revenue|rub }}</div>
+    </div>
+    <div class="stat">
+        <div class="label">RevPATT</div>
+        <div class="value" style="font-size: 28px">{{ revpatt_kopecks|rub }}</div>
+        <div class="diff">выручка на слот</div>
+    </div>
+    <div class="stat">
+        <div class="label">Клиентов в базе</div>
+        <div class="value">{{ clients_count }}</div>
+        <div class="diff">уникальных</div>
+    </div>
+    <div class="stat {% if no_show_week > 0 %}stat-danger{% endif %}">
+        <div class="label">Неявки за неделю</div>
+        <div class="value">{{ no_show_week }}</div>
+        <div class="diff">{{ cancel_week }} отмен</div>
+    </div>
+</div>
+
+<!-- Booking Pace + Revenue by category -->
+<div class="grid grid-2 mb-4">
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Темп бронирований (30 дней)</h3>
+            <span class="muted" style="font-size:12px">количество броней в день</span>
+        </div>
+        {% if pace_labels %}
+            <canvas id="paceChart" height="220"></canvas>
+        {% else %}
+            <p class="muted">Данных пока нет.</p>
+        {% endif %}
+    </div>
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Выручка по категориям (30 дней)</h3>
+        </div>
+        {% if cat_labels %}
+            <canvas id="catChart" height="220"></canvas>
+        {% else %}
+            <p class="muted">Нет оплаченных броней за период.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Heatmap -->
+<div class="panel mb-4">
+    <div class="panel-head">
+        <h3>Тепловая карта загрузки · день недели × час</h3>
+        <span class="muted" style="font-size:12px">за последние 30 дней</span>
+    </div>
+    {% set weekday_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] %}
+    <div class="heatmap-grid">
+        <div></div>
+        {% for h in range(opening_hour, closing_hour) %}
+        <div class="heatmap-label">{{ h }}</div>
+        {% endfor %}
+
+        {% for wd in range(7) %}
+        <div class="heatmap-label">{{ weekday_names[wd] }}</div>
+        {% for h in range(opening_hour, closing_hour) %}
+            {% set count = heatmap[wd][h] %}
+            {% set intensity = (count * 100 // heatmap_max) if heatmap_max > 0 else 0 %}
+            <div class="heatmap-cell"
+                 title="{{ weekday_names[wd] }} {{ h }}:00 — {{ count }} броней"
+                 style="background: rgba(21, 94, 63, {{ (intensity / 100) if intensity > 0 else 0.05 }})">
+                {% if count > 0 %}
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                            color:{{ '#fff' if intensity > 40 else 'var(--ink-700)' }};
+                            font-weight:600; font-size: 10px">{{ count }}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+    <p class="muted mt-3" style="font-size:12px">
+        Цвет ячейки — количество броней. Чем темнее, тем больше. Помогает определить пики загрузки.
+    </p>
+</div>
+
+<!-- Utilization + Today + Audit -->
+<div class="grid grid-2 mb-4">
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Топ-10 загрузки ресурсов</h3>
+            <span class="muted" style="font-size:12px">часы занятости / доступные часы</span>
+        </div>
+        {% if utilization %}
+            {% for u in utilization %}
+            <div style="margin-bottom: 10px">
+                <div class="row-between" style="margin-bottom: 4px; font-size: 13px">
+                    <strong>{{ u.name }}</strong>
+                    <span class="muted">{{ u.used|round(1) }} ч</span>
+                </div>
+                <div class="util-bar">
+                    <div class="util-bar-fill" style="width: {{ u.pct }}%"></div>
+                    <div class="util-bar-label">
+                        <span></span>
+                        <span>{{ u.pct }}%</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">Пока нет бронирований для анализа.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Топ-5 дней по выручке</h3>
+        </div>
+        {% if top_days %}
+        <table class="tbl" style="border:none">
+            <thead><tr><th>Дата</th><th class="text-right">Броней</th><th class="text-right">Выручка</th></tr></thead>
+            <tbody>
+            {% for d in top_days %}
+            <tr>
+                <td><strong>{{ d.d }}</strong></td>
+                <td class="text-right num">{{ d.cnt }}</td>
+                <td class="text-right"><span class="price">{{ d.rev|rub }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="muted">Нет оплаченных броней.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Сегодня + Audit -->
+<div class="grid grid-2">
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Сегодня в расписании</h3>
+            <a href="{{ url_for('calendar.index') }}" class="btn btn-ghost btn-sm">
+                <i data-lucide="calendar"></i> К тайм-шиту
+            </a>
+        </div>
+        {% if upcoming_today %}
+            {% for b in upcoming_today %}
+            <div class="row-between" style="padding: 10px 0; border-bottom: 1px solid var(--ink-100)">
+                <div>
+                    <strong>{{ b.starts_at|hm }}–{{ b.ends_at|hm }}</strong> ·
+                    {{ b.customer.name if b.customer else 'Без клиента' }}
+                    {% if b.service %}<span class="muted">· {{ b.service.name }}</span>{% endif %}
+                </div>
+                <div class="row" style="gap: 6px">
+                    <span class="badge status-{{ b.status }}">{{ b.status|status_label }}</span>
+                    <button hx-get="{{ url_for('bookings.drawer', bid=b.id) }}"
+                            hx-target="#drawer-container" hx-swap="innerHTML"
+                            class="btn btn-ghost btn-xs">
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">Сегодня пока нет броней.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Последние действия</h3>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin.audit') }}" class="btn btn-ghost btn-sm">
+                <i data-lucide="file-search"></i> Полная история
+            </a>
+            {% endif %}
+        </div>
+        {% if recent_audit %}
+            {% for e in recent_audit %}
+            <div style="padding: 8px 0; border-bottom: 1px solid var(--ink-100); font-size: 13px">
+                <div class="row-between">
+                    <span>
+                        <strong>{{ e.actor_username }}</strong>
+                        <span class="badge badge-gray">{{ e.action }}</span>
+                        <span class="muted">{{ e.entity }}#{{ e.entity_id }}</span>
+                    </span>
+                    <span class="muted">{{ e.at.strftime('%d.%m %H:%M') }}</span>
+                </div>
+                {% if e.summary %}<div class="muted mt-2">{{ e.summary }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">Пока пусто.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const brandGreen = '#155E3F';
+const brandGold = '#C9A961';
+const palette = ['#155E3F', '#C9A961', '#3A6EA5', '#8B5A96', '#D89B2A', '#2E9A6A', '#7A5A10'];
+
+{% if pace_labels %}
+new Chart(document.getElementById('paceChart'), {
+    type: 'line',
+    data: {
+        labels: {{ pace_labels|tojson }},
+        datasets: [{
+            label: 'Броней',
+            data: {{ pace_values|tojson }},
+            borderColor: brandGreen,
+            backgroundColor: 'rgba(21, 94, 63, 0.12)',
+            fill: true, tension: 0.35,
+            pointRadius: 3, pointBackgroundColor: brandGold,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+{% endif %}
+
+{% if cat_labels %}
+new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ cat_labels|tojson }},
+        datasets: [{
+            data: {{ cat_values|tojson }},
+            backgroundColor: palette,
+            borderWidth: 2, borderColor: '#fff',
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 } } },
+            tooltip: { callbacks: {
+                label: ctx => ctx.label + ': ' + ctx.parsed.toLocaleString('ru') + ' ₽',
+            }}
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

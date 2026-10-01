@@ -1,0 +1,65 @@
+{% extends "_base.html" %}
+{% block title %}Тренеры{% endblock %}
+{% block topbar_title %}Тренеры{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>Тренерский состав</h1><p class="sub">Всего: {{ instructors|length }}</p></div>
+    {% if current_user.is_manager %}
+    <a href="{{ url_for('catalog.new_instructor') }}" class="btn btn-primary">
+        <i data-lucide="user-plus"></i> Добавить тренера
+    </a>
+    {% endif %}
+</div>
+
+<div class="panel no-pad" style="overflow-x:auto">
+<table class="tbl">
+    <thead><tr>
+        <th>Тренер</th>
+        <th>Специализации</th>
+        <th>Услуг с override</th>
+        <th>Статус</th>
+        {% if current_user.is_manager %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+        {% for t in instructors %}
+        <tr {% if not t.active %}style="opacity:0.5"{% endif %}>
+            <td>
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%;
+                    background:{{ t.color }}; vertical-align: middle; margin-right: 8px"></span>
+                <strong>{{ t.name }}</strong>
+                {% if t.phone %}<div class="muted" style="font-size:11px">{{ t.phone }}</div>{% endif %}
+            </td>
+            <td>
+                {% if t.specializations %}
+                    {% for sp in t.specializations %}
+                        <span class="badge badge-green">{{ sp.name }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span class="muted" style="font-size:12px">{{ t.specialization or '—' }}</span>
+                {% endif %}
+            </td>
+            <td class="num muted">{{ t.service_prices|selectattr('active')|list|length }}</td>
+            <td>
+                {% if t.active %}<span class="badge badge-green">Активен</span>
+                {% else %}<span class="badge badge-gray">Выключен</span>{% endif %}
+            </td>
+            {% if current_user.is_manager %}
+            <td class="text-right nowrap">
+                <a href="{{ url_for('catalog.edit_instructor', iid=t.id) }}" class="btn btn-ghost btn-sm" title="Настроить">
+                    <i data-lucide="sliders"></i>
+                </a>
+                <form method="POST" action="{{ url_for('catalog.toggle_instructor', iid=t.id) }}" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-ghost btn-sm">
+                        <i data-lucide="{{ 'eye-off' if t.active else 'eye' }}"></i>
+                    </button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

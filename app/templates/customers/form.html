@@ -1,0 +1,39 @@
+{% extends "_base.html" %}
+{% block title %}{{ 'Клиент' if customer else 'Новый клиент' }}{% endblock %}
+{% block topbar_title %}{{ 'Редактирование' if customer else 'Новый клиент' }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>{{ 'Редактировать клиента' if customer else 'Новый клиент' }}</h1></div>
+    <a href="{{ url_for('customers.index') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="panel" style="max-width: 800px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row"><label>ФИО *</label>
+        <input type="text" name="name" class="input" required autofocus
+               value="{{ customer.name if customer else '' }}"></div>
+    <div class="form-grid">
+        <div class="form-row"><label>Телефон</label>
+            <input type="text" name="phone" class="input" value="{{ customer.phone if customer else '' }}"></div>
+        <div class="form-row"><label>Email</label>
+            <input type="email" name="email" class="input" value="{{ customer.email if customer else '' }}"></div>
+    </div>
+    <div class="form-grid">
+        <div class="form-row"><label>Марка ТС</label>
+            <input type="text" name="car_brand" class="input" value="{{ customer.car_brand if customer else '' }}"></div>
+        <div class="form-row"><label>Номер ТС</label>
+            <input type="text" name="car_number" class="input" value="{{ customer.car_number if customer else '' }}"></div>
+    </div>
+    <div class="form-row"><label>Заметки</label>
+        <textarea name="notes" class="textarea">{{ customer.notes if customer else '' }}</textarea></div>
+    <div class="row mt-4">
+        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+        <a href="{{ url_for('customers.index') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+{% endblock %}

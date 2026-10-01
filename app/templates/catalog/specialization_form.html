@@ -1,0 +1,66 @@
+{% extends "_base.html" %}
+{% block title %}{{ 'Специализация' if spec else 'Новая специализация' }}{% endblock %}
+{% block topbar_title %}{{ 'Правка специализации' if spec else 'Новая специализация' }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>{{ 'Редактировать специализацию' if spec else 'Новая специализация' }}</h1></div>
+    <a href="{{ url_for('catalog.specializations') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="panel" style="max-width:720px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-grid">
+        <div class="form-row">
+            <label>Название</label>
+            <input type="text" name="name" class="input" required autofocus
+                   value="{{ spec.name if spec else '' }}"
+                   placeholder="Например: Short game">
+        </div>
+        <div class="form-row">
+            <label>Код (латиницей, без пробелов)</label>
+            <input type="text" name="code" class="input" required
+                   value="{{ spec.code if spec else '' }}"
+                   placeholder="short_game" {% if spec %}readonly{% endif %}>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label>Описание</label>
+        <input type="text" name="description" class="input"
+               value="{{ spec.description if spec else '' }}"
+               placeholder="Чиппинг, питчинг, бункер, паттинг">
+    </div>
+
+    <div class="form-row">
+        <label>К каким категориям услуг применима</label>
+        <p class="hint">При назначении этой специализации тренеру — в конструкторе авто-подсвечиваются услуги из этих категорий.</p>
+        <div class="grid grid-3" style="gap:8px; margin-top:8px">
+            {% for cat in categories %}
+            <label class="checkbox-row">
+                <input type="checkbox" name="applicable_categories" value="{{ cat }}"
+                       {% if spec and cat in spec.applicable_categories %}checked{% endif %}>
+                <span>{{ cat }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if spec %}
+    <label class="checkbox-row">
+        <input type="checkbox" name="active" {% if spec.active %}checked{% endif %}>
+        <span>Активна (показывается в списках выбора)</span>
+    </label>
+    {% endif %}
+
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+        <a href="{{ url_for('catalog.specializations') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+{% endblock %}

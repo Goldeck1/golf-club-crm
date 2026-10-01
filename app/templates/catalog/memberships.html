@@ -1,0 +1,57 @@
+{% extends "_base.html" %}
+{% block title %}Членство{% endblock %}
+{% block topbar_title %}Тарифы членства{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Тарифы членства</h1>
+        <p class="sub">Уровни привилегий и скидок для членов клуба</p>
+    </div>
+</div>
+
+<div class="grid grid-4">
+    {% for p in plans %}
+    <div class="panel {% if p.tier >= 3 %}stat-accent{% endif %}" style="display:flex; flex-direction:column">
+        <div class="row-between mb-2">
+            <span class="badge badge-{{ 'gold' if p.tier >= 3 else 'green' }}">Tier {{ p.tier }}</span>
+            {% if not p.active %}<span class="badge badge-gray">Выключен</span>{% endif %}
+        </div>
+        <h2 style="margin-bottom: 4px">{{ p.name }}</h2>
+        <div style="font-family: 'Playfair Display', serif; font-size: 24px; color: var(--green-800); font-weight: 700; margin-bottom: 16px">
+            {{ p.price_kopecks|rub }}<span class="muted" style="font-size: 13px"> / {{ p.duration_days }} дн.</span>
+        </div>
+
+        <div style="font-size: 13px; line-height: 1.8; flex: 1">
+            <div><i data-lucide="percent" style="width:14px;height:14px;vertical-align:middle;color:var(--green-600)"></i>
+                 Скидка: <strong>{{ p.discount_percent }}%</strong></div>
+            <div><i data-lucide="calendar-check" style="width:14px;height:14px;vertical-align:middle;color:var(--green-600)"></i>
+                 Бронь за <strong>{{ p.priority_booking_days or 0 }} дн.</strong> наперёд</div>
+            {% if p.description %}
+            <div class="muted mt-2" style="font-size: 12px">{{ p.description }}</div>
+            {% endif %}
+        </div>
+
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('catalog.edit_membership', pid=p.id) }}" class="btn btn-outline btn-sm mt-3">
+            <i data-lucide="pencil"></i> Настроить
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="panel mt-4">
+    <h3>Как работают скидки по членству</h3>
+    <div class="muted" style="font-size:13px; line-height:1.7">
+        При создании брони для клиента со <strong>активным членством</strong>:
+        <ol style="padding-left:20px">
+            <li>Берётся базовая цена услуги</li>
+            <li>Применяется override тренера (если задан)</li>
+            <li>Применяется правило прайс-листа (день недели/время/сезон) — если есть</li>
+            <li>В конце вычитается <strong>скидка по членству</strong> (% от subtotal)</li>
+        </ol>
+        <p>Tier также открывает <em>приоритетную бронь</em> — возможность бронировать за N дней наперёд. Чем выше tier, тем дальше.</p>
+    </div>
+</div>
+{% endblock %}

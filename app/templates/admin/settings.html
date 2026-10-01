@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block topbar_title %}Настройки{% endblock %}
+
+{% block content %}
+<div class="page-head"><div><h1>Настройки</h1></div></div>
+
+<div class="panel" style="max-width:640px">
+    <h3>Сезонный режим</h3>
+    <p class="muted mb-3">Услуги «только лето» / «только зима» скрываются из формы бронирования автоматически вне сезона.</p>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="form" value="season">
+        <div class="form-row"><label>Режим</label>
+            <select name="season" class="select">
+                <option value="auto"   {% if season_mode == 'auto' %}selected{% endif %}>Авто (май–сент = лето)</option>
+                <option value="summer" {% if season_mode == 'summer' %}selected{% endif %}>Принудительно летний</option>
+                <option value="winter" {% if season_mode == 'winter' %}selected{% endif %}>Принудительно зимний</option>
+            </select></div>
+        <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "_base.html" %}
+{% block title %}Услуги и прайс{% endblock %}
+{% block topbar_title %}Услуги и прайс-лист{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Услуги и прайс-лист 2026</h1>
+        <p class="sub">Каталог · {{ grouped.values()|map('length')|sum }} позиций</p>
+    </div>
+</div>
+
+<form method="GET" class="toolbar">
+    <label class="checkbox-row">
+        <input type="checkbox" name="inactive" value="1" {% if show_inactive %}checked{% endif %} onchange="this.form.submit()">
+        <span>Показывать неактивные</span>
+    </label>
+</form>
+
+{% for category, items in grouped.items() %}
+<div class="panel">
+    <div class="panel-head">
+        <h3>{{ category }}</h3>
+        <span class="muted">{{ items|length }} позиций</span>
+    </div>
+    <table class="tbl" style="margin-top: 4px">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Сезон</th>
+                <th>Длительность</th>
+                <th>Группа</th>
+                <th>Тренер?</th>
+                <th class="text-right">Цена</th>
+                <th>Статус</th>
+                {% if current_user.is_manager %}<th></th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in items %}
+            <tr {% if not s.active %}style="opacity:0.5"{% endif %}>
+                <td>
+                    <strong>{{ s.name }}</strong>
+                    {% if s.is_trial %}<span class="badge badge-gold">Пробная</span>{% endif %}
+                    {% if s.is_kids %}<span class="badge badge-blue">Детская</span>{% endif %}
+                </td>
+                <td>
+                    {% if s.season == 'summer' %}<span class="badge badge-gold">☀ Лето</span>
+                    {% elif s.season == 'winter' %}<span class="badge badge-blue">❄ Зима</span>
+                    {% else %}<span class="badge badge-green">Круглый год</span>{% endif %}
+                </td>
+                <td class="num nowrap">{{ s.duration_min }} мин</td>
+                <td class="num">{{ s.group_size or '—' }}</td>
+                <td>{% if s.requires_instructor %}<i data-lucide="check" style="width:14px;height:14px;color:var(--green-600)"></i>{% else %}<span class="dim">—</span>{% endif %}</td>
+                <td class="text-right"><span class="price">{{ s.base_price_kopecks|rub }}</span></td>
+                <td>
+                    {% if s.active %}<span class="badge badge-green">Активна</span>
+                    {% else %}<span class="badge badge-gray">Выключена</span>{% endif %}
+                </td>
+                {% if current_user.is_manager %}
+                <td class="text-right nowrap">
+                    <a href="{{ url_for('catalog.edit_service', sid=s.id) }}" class="btn btn-ghost btn-sm" title="Редактировать">
+                        <i data-lucide="pencil"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('catalog.toggle_service', sid=s.id) }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-ghost btn-sm" title="Включить/выключить">
+                            <i data-lucide="{{ 'eye-off' if s.active else 'eye' }}"></i>
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% endblock %}

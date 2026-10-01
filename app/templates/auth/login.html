@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+{% block title %}Вход{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-brand">
+        <div class="mark">⛳</div>
+        <div class="title">GolfAdmin</div>
+        <div class="sub">{{ CLUB_NAME }}</div>
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>Логин</label>
+            <input type="text" name="username" class="input" required autofocus>
+        </div>
+        <div class="form-row">
+            <label>Пароль</label>
+            <input type="password" name="password" class="input" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+            <i data-lucide="log-in"></i> Войти
+        </button>
+    </form>
+
+    <p class="hint text-center mt-3">
+        Демо: <code>admin / admin</code> · <code>manager / manager</code> · <code>cashier / cashier</code>
+    </p>
+</div>
+{% endblock %}

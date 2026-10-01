@@ -1,0 +1,61 @@
+{% extends "_base.html" %}
+{% block title %}Тариф {{ plan.name }}{% endblock %}
+{% block topbar_title %}Настройка тарифа{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>{{ plan.name }}</h1>
+        <p class="sub">Tier {{ plan.tier }} · текущая цена {{ plan.price_kopecks|rub }}</p>
+    </div>
+    <a href="{{ url_for('catalog.memberships') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> К тарифам
+    </a>
+</div>
+
+<div class="panel" style="max-width: 720px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-grid">
+        <div class="form-row"><label>Название</label>
+            <input type="text" name="name" class="input" value="{{ plan.name }}" required></div>
+        <div class="form-row"><label>Tier (уровень, 1–5)</label>
+            <input type="number" name="tier" class="input" min="1" max="5" value="{{ plan.tier }}"></div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-row"><label>Цена тарифа, ₽</label>
+            <input type="number" name="price_rub" class="input" min="0" step="1000"
+                   value="{{ plan.price_kopecks // 100 }}"></div>
+        <div class="form-row"><label>Срок действия (дней)</label>
+            <input type="number" name="duration_days" class="input" min="1" value="{{ plan.duration_days }}"></div>
+    </div>
+
+    <div class="form-grid">
+        <div class="form-row"><label>Скидка на все услуги, %</label>
+            <input type="number" name="discount_percent" class="input" min="0" max="100"
+                   value="{{ plan.discount_percent }}">
+            <p class="hint">Применяется к final subtotal каждой брони клиента с активным tier.</p>
+        </div>
+        <div class="form-row"><label>Приоритетная бронь, дней вперёд</label>
+            <input type="number" name="priority_booking_days" class="input" min="0"
+                   value="{{ plan.priority_booking_days }}">
+            <p class="hint">На сколько дней раньше обычных гостей может бронировать.</p>
+        </div>
+    </div>
+
+    <div class="form-row"><label>Описание привилегий</label>
+        <textarea name="description" class="textarea">{{ plan.description }}</textarea></div>
+
+    <label class="checkbox-row">
+        <input type="checkbox" name="active" {% if plan.active %}checked{% endif %}>
+        <span>Активен — показывается в формах назначения клиенту</span>
+    </label>
+
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="save"></i> Сохранить</button>
+        <a href="{{ url_for('catalog.memberships') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+{% endblock %}

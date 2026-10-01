@@ -1,0 +1,147 @@
+<div class="drawer" x-data="{open: true}" x-show="open" @click.outside="open=false; setTimeout(() => document.getElementById('drawer-container').innerHTML = '', 200)">
+    <div class="drawer-head">
+        <div>
+            <h3 style="margin:0">Бронь #{{ b.id }}</h3>
+            <div class="muted" style="font-size:12px">
+                <span class="badge status-{{ b.status }}">{{ b.status|status_label }}</span>
+                {% if b.payment_status == 'paid' %}
+                    <span class="badge pay-paid">Оплачено</span>
+                {% else %}
+                    <span class="badge pay-unpaid">Не оплачено</span>
+                {% endif %}
+            </div>
+        </div>
+        <button class="drawer-close" @click="document.getElementById('drawer-container').innerHTML = ''">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+
+    <div class="drawer-body">
+        <div class="panel" style="padding: 14px; margin-bottom: 14px">
+            <div style="font-family: 'Playfair Display', serif; font-size: 20px; color: var(--green-800); font-weight: 700">
+                {{ b.customer.name if b.customer else 'Без клиента' }}
+            </div>
+            {% if b.customer and b.customer.phone %}
+            <div class="muted" style="font-size: 13px; margin-top: 2px">📞 {{ b.customer.phone }}</div>
+            {% endif %}
+            <div class="muted mt-2" style="font-size: 13px">
+                {{ b.starts_at.strftime('%d.%m.%Y %H:%M') }} — {{ b.ends_at|hm }}
+                · {{ b.duration_min }} мин
+            </div>
+            {% if b.resource %}
+                <div class="mt-2"><i data-lucide="map-pin" style="width:14px;height:14px;vertical-align:middle;color:var(--ink-500)"></i>
+                    {{ b.resource.zone.name }} · <strong>{{ b.resource.name }}</strong></div>
+            {% endif %}
+            {% if b.service %}
+                <div class="mt-2"><i data-lucide="tag" style="width:14px;height:14px;vertical-align:middle;color:var(--ink-500)"></i>
+                    {{ b.service.name }}</div>
+            {% endif %}
+            {% if b.instructor %}
+                <div class="mt-2"><i data-lucide="user-cog" style="width:14px;height:14px;vertical-align:middle;color:var(--ink-500)"></i>
+                    {{ b.instructor.name }}</div>
+            {% endif %}
+            {% if b.guests and b.guests > 1 %}
+                <div class="mt-2"><i data-lucide="users" style="width:14px;height:14px;vertical-align:middle;color:var(--ink-500)"></i>
+                    Гостей: {{ b.guests }}</div>
+            {% endif %}
+            {% if b.comment %}
+                <div class="mt-3 muted" style="font-size: 13px; white-space: pre-wrap; padding: 10px; background: var(--cream-50); border-radius: 8px">
+                    {{ b.comment }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="panel" style="padding: 14px; margin-bottom: 14px">
+            <div class="row-between">
+                <div class="muted" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em">Сумма</div>
+                <div style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--green-800)">
+                    {{ b.total_kopecks|rub }}
+                </div>
+            </div>
+            {% if b.discount_kopecks %}
+            <div class="row-between mt-2" style="font-size: 13px">
+                <span class="muted">Скидка:</span>
+                <span>−{{ b.discount_kopecks|rub }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Действия по статусу -->
+        <div class="mb-4">
+            <h3 style="font-size: 14px; margin-bottom: 10px">Действия</h3>
+            <div class="row" style="gap: 6px">
+                {% set csrf = csrf_token() %}
+                {% if b.status == 'confirmed' %}
+                    <form method="POST" action="{{ url_for('bookings.check_in', bid=b.id) }}"
+                          hx-post="{{ url_for('bookings.check_in', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <button class="btn btn-primary btn-sm"><i data-lucide="log-in"></i> Регистрация</button>
+                    </form>
+                    <form hx-post="{{ url_for('bookings.complete', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <button class="btn btn-outline btn-sm"><i data-lucide="check"></i> Завершить</button>
+                    </form>
+                {% elif b.status == 'checked_in' %}
+                    <form hx-post="{{ url_for('bookings.complete', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <button class="btn btn-primary btn-sm"><i data-lucide="check"></i> Завершить</button>
+                    </form>
+                {% endif %}
+
+                {% if b.payment_status != 'paid' and b.status not in ('cancelled',) %}
+                    <form hx-post="{{ url_for('bookings.pay', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <input type="hidden" name="method" value="cash">
+                        <button class="btn btn-gold btn-sm"><i data-lucide="credit-card"></i> Принять оплату</button>
+                    </form>
+                {% endif %}
+
+                {% if current_user.is_manager and b.status in ('confirmed', 'checked_in') %}
+                    <form hx-post="{{ url_for('bookings.no_show', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML"
+                          hx-confirm="Отметить как неявку?" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <button class="btn btn-outline btn-sm"><i data-lucide="user-x"></i> Неявка</button>
+                    </form>
+                    <form hx-post="{{ url_for('bookings.cancel', bid=b.id) }}"
+                          hx-target="#drawer-container" hx-swap="innerHTML"
+                          hx-confirm="Отменить бронь?" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                        <button class="btn btn-danger btn-sm"><i data-lucide="x"></i> Отменить</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Audit log -->
+        <div>
+            <h3 style="font-size: 14px; margin-bottom: 10px">История действий</h3>
+            {% if audit_entries %}
+                {% for e in audit_entries %}
+                <div style="padding: 8px 0; border-bottom: 1px solid var(--ink-100); font-size: 13px">
+                    <div class="row-between">
+                        <span><strong>{{ e.actor_username }}</strong>
+                              <span class="badge badge-gray">{{ e.action }}</span></span>
+                        <span class="muted">{{ e.at.strftime('%d.%m %H:%M') }}</span>
+                    </div>
+                    {% if e.summary %}<div class="muted mt-2">{{ e.summary }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="muted">История пуста</p>
+            {% endif %}
+        </div>
+
+        {% if b.customer %}
+        <div class="mt-4">
+            <a href="{{ url_for('customers.detail', cid=b.customer.id) }}" class="btn btn-outline btn-sm btn-block">
+                <i data-lucide="user"></i> Открыть профиль клиента
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>

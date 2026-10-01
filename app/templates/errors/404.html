@@ -1,0 +1,10 @@
+{% extends "_base.html" %}
+{% block title %}Не найдено{% endblock %}
+{% block topbar_title %}404{% endblock %}
+{% block content %}
+<div class="empty" style="padding: 100px 20px">
+    <div class="icon">🔍</div>
+    <div class="title">Страница не найдена</div>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary mt-3">На дашборд</a>
+</div>
+{% endblock %}

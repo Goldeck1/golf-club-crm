@@ -1,0 +1,37 @@
+{% extends "_base.html" %}
+{% block title %}Новый сотрудник{% endblock %}
+{% block topbar_title %}Новый сотрудник{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>Новый сотрудник</h1></div>
+    <a href="{{ url_for('admin.staff') }}" class="btn btn-outline">
+        <i data-lucide="arrow-left"></i> Назад
+    </a>
+</div>
+
+<div class="panel" style="max-width:680px">
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row"><label>ФИО *</label>
+        <input type="text" name="name" class="input" required autofocus></div>
+    <div class="form-grid">
+        <div class="form-row"><label>Логин *</label>
+            <input type="text" name="username" class="input" required></div>
+        <div class="form-row"><label>Пароль *</label>
+            <input type="password" name="password" class="input" required></div>
+    </div>
+    <div class="form-row"><label>Роль</label>
+        <select name="role" class="select">
+            <option value="staff">Сотрудник — базовый доступ</option>
+            <option value="manager">Менеджер — создание/отмена броней, тренеры, услуги</option>
+            <option value="accounting">Бухгалтерия — финансы и отчёты</option>
+            <option value="admin">Администратор — полный доступ</option>
+        </select></div>
+    <div class="row mt-4">
+        <button class="btn btn-primary"><i data-lucide="check"></i> Добавить</button>
+        <a href="{{ url_for('admin.staff') }}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+# Python
+venv/
+venv-mac/
+__pycache__/
+
+# Backup of the nested git repo (после схлопывания в vault)
+.git-old-bak/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Playwright
+playwright-report/
+test-results/
+.playwright-mcp/
+
+# Secrets / env
+.env
+.env.local
+deploy/certs/
+.secrets.baseline
+
+# DB / local data
+*.db
+*.db-shm
+*.db-wal
+backups/
+
+# Screenshots / artifacts
+screens/
+v2-*.png
+0[1-9]-*.png
+1[0-9]-*.png
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude / session
+.claude/
+sessions/
+.planning/
+
+# Internal working notes
+_CLAUDE.md
+handoff.md
+_price.txt
+_read_price.py

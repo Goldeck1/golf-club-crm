@@ -1,0 +1,56 @@
+{% extends "_base.html" %}
+{% block title %}Ресурсы{% endblock %}
+{% block topbar_title %}Инфраструктура и ресурсы{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Инфраструктура клуба</h1>
+        <p class="sub">Зоны → ресурсы. Каждый ресурс бронируется индивидуально.</p>
+    </div>
+</div>
+
+{% for zone in zones %}
+<div class="panel">
+    <div class="panel-head">
+        <h3>{{ zone.name }}</h3>
+        <span class="muted">{{ zone.resources|length }} ресурсов</span>
+    </div>
+    <table class="tbl" style="margin-top:4px">
+        <thead><tr><th>Название</th><th>Код</th><th>Тип</th><th>Сезон</th>
+                   <th>Вместимость</th><th>Статус</th>
+                   {% if current_user.is_manager %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+            {% for r in zone.resources %}
+            <tr {% if not r.active %}style="opacity:0.5"{% endif %}>
+                <td>
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%;
+                        background:{{ r.display_color }}; vertical-align: middle; margin-right: 8px"></span>
+                    <strong>{{ r.name }}</strong>
+                </td>
+                <td class="muted"><code>{{ r.code }}</code></td>
+                <td class="muted">{{ r.resource_type.name }}</td>
+                <td>
+                    {% if r.season == 'summer' %}<span class="badge badge-gold">☀ Лето</span>
+                    {% elif r.season == 'winter' %}<span class="badge badge-blue">❄ Зима</span>
+                    {% else %}<span class="badge badge-green">Круглый год</span>{% endif %}
+                </td>
+                <td class="num">{{ r.capacity }}</td>
+                <td>
+                    {% if r.active %}<span class="badge badge-green">Активен</span>
+                    {% else %}<span class="badge badge-gray">Выключен</span>{% endif %}
+                </td>
+                {% if current_user.is_manager %}
+                <td class="text-right">
+                    <a href="{{ url_for('catalog.edit_resource', rid=r.id) }}" class="btn btn-ghost btn-sm" title="Настроить">
+                        <i data-lucide="sliders"></i>
+                    </a>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% endblock %}
